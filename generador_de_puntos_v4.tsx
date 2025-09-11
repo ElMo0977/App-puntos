@@ -1070,15 +1070,17 @@ export default function App() {
                   ringsRed,
                   activeF2
                 ),
-                ...blue.map((b, i) =>
-                  draw(
+                ...blue.map((b, i) => {
+                  const bad = !!(viol.blue[i]?.x || viol.blue[i]?.y || viol.blue[i]?.z);
+                  const col = bad ? "#dc2626" : "#2563eb"; // rojo si incumple
+                  return draw(
                     b,
                     `P${i + 1} (${b.x.toFixed(1)}, ${b.y.toFixed(1)}, ${b.z.toFixed(1)})`,
-                    "#2563eb",
+                    col,
                     ringsBlue,
                     true
-                  )
-                ),
+                  );
+                }),
               ];
             })()}
           </svg>
