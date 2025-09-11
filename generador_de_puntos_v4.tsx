@@ -1272,40 +1272,12 @@ export default function App() {
 
           {/* Avisos de incoherencia (siempre en rojo) */}
           {(() => {
-            const list: string[] = [];
-            const pts: { name: string; p: P3 }[] = [
-              ...(activeF1 ? [{ name: "F1", p: F1 }] : []),
-              ...(activeF2 ? [{ name: "F2", p: F2 }] : []),
-              ...blue.map((b, i) => ({ name: `P${i + 1}`, p: b })),
-            ];
-            (["x", "y", "z"] as const).forEach((axis) => {
-              const map = new Map<string, string[]>();
-              pts.forEach(({ name, p }) => {
-                const k = key01((p as any)[axis]);
-                if (!map.has(k)) map.set(k, []);
-                map.get(k)!.push(name);
-              });
-              for (const [k, names] of map)
-                if (names.length > 1)
-                  list.push(`${axis.toUpperCase()} repetida (= ${k}) entre ${names.join(", ")}`);
-            });
-            if (activeF1 && activeF2) {
-              const pd = planarDistances(F1, F2);
-              const dx = Math.abs(F1.x - F2.x),
-                dy = Math.abs(F1.y - F2.y),
-                dz = Math.abs(F1.z - F2.z);
-              if (pd.xy < 0.7) list.push(`F1 y F2: XY = ${pd.xy.toFixed(2)} < 0,7 m`);
-              if (pd.xz < 0.7) list.push(`F1 y F2: XZ = ${pd.xz.toFixed(2)} < 0,7 m`);
-              if (pd.yz < 0.7) list.push(`F1 y F2: YZ = ${pd.yz.toFixed(2)} < 0,7 m`);
-              if (dx < 0.7) list.push(`F1 y F2: |X| = ${dx.toFixed(2)} < 0,7 m`);
-              if (dy < 0.7) list.push(`F1 y F2: |Y| = ${dy.toFixed(2)} < 0,7 m`);
-              if (dz < 0.7) list.push(`F1 y F2: |Z| = ${dz.toFixed(2)} < 0,7 m`);
-            }
-            return list.length ? (
+            const issues = buildViolationSummary(blue);
+            return issues.length ? (
               <div className="mt-2 p-2 border border-red-300 rounded bg-red-50 text-red-700 text-xs">
                 <div className="font-medium mb-1">Avisos de incoherencia:</div>
                 <ul className="list-disc pl-4 space-y-0.5">
-                  {list.map((m, i) => (
+                  {issues.map((m, i) => (
                     <li key={i}>{m}</li>
                   ))}
                 </ul>
