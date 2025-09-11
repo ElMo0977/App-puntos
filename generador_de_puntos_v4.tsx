@@ -245,14 +245,14 @@ function generateBluePoints({
   const desiredZ = [1.0, 1.1, 1.2, 1.3, 1.4].map(round01);
   const zLevelsAll = Array.from(new Set(candidates.map(c => key01(c.z)))).map(parseFloat).sort((a,b)=>a-b);
 
+  // Nota: a partir de la nueva regla, las Z de azules pueden coincidir con F1/F2
   const usedZFromRed = new Set<string>();
-  if (f1Active) usedZFromRed.add(key01(F1.z));
-  if (f2Active) usedZFromRed.add(key01(F2.z));
+  if (false && f1Active) usedZFromRed.add(key01(F1.z));
+  if (false && f2Active) usedZFromRed.add(key01(F2.z));
 
   // zOptions por índice: ordenados por cercanía al deseado + jitter y rotación aleatoria para diversificar
   const zOptionsByIdx: number[][] = desiredZ.map((dz) => {
     const arr = zLevelsAll
-      .filter(z => !usedZFromRed.has(key01(z)))
       .map(z => ({ z, k: Math.abs(z - dz) + rng()*0.001 }))
       .sort((a,b)=>a.k-b.k)
       .map(e=>e.z);
@@ -282,7 +282,8 @@ function generateBluePoints({
   // Conjuntos usados por unicidad (incluye fuentes activas)
   const usedX0 = new Set<string>();
   const usedY0 = new Set<string>();
-  const usedZ0 = new Set<string>(usedZFromRed);
+  // Z únicas solo entre puntos azules
+  const usedZ0 = new Set<string>();
   if (f1Active) { usedX0.add(key01(F1.x)); usedY0.add(key01(F1.y)); }
   if (f2Active) { usedX0.add(key01(F2.x)); usedY0.add(key01(F2.y)); }
 
@@ -303,7 +304,7 @@ function generateBluePoints({
     const zList = zOptionsByIdx[i].slice(0, Math.min(TOPZ, zOptionsByIdx[i].length));
     for (const z of zList) {
       const zk = key01(z);
-      if (usedZ.has(zk)) continue; // Z único (incluye fuentes)
+      if (usedZ.has(zk)) continue; // Z único solo entre azules
       let pool = (byZ.get(zk) || []).filter(c => !usedX.has(key01(c.x)) && !usedY.has(key01(c.y)));
       if (!pool.length) continue;
 
@@ -615,8 +616,11 @@ export default function App() {
         if (!map.has(k)) map.set(k, []);
         map.get(k)!.push({ who, i });
       };
-      if (activeF1) add("F1", -1, (F1 as any)[axis]);
-      if (activeF2) add("F2", -1, (F2 as any)[axis]);
+      // Para Z: no marcamos duplicidades entre azules y rojos
+      if (axis !== "z") {
+        if (activeF1) add("F1", -1, (F1 as any)[axis]);
+        if (activeF2) add("F2", -1, (F2 as any)[axis]);
+      }
       blue.forEach((b, i) => add("B", i, (b as any)[axis]));
       for (const [, list] of map)
         if (list.length > 1)
@@ -733,11 +737,13 @@ export default function App() {
       if (!pointInPolygon(p, vertices) || minDistToEdges2D(p, vertices) < MARGIN - EPS) out.push(`P${i+1} fuera del polígono o a <0,5 m del borde`);
       if (p.z < MARGIN || p.z > alturaZ - MARGIN) out.push(`P${i+1} con Z fuera de márgenes`);
     });
-    // duplicidades por ejes (incluye F1/F2 activas)
+    // duplicidades por ejes (Z solo única entre azules; puede coincidir con F1/F2)
     (["x","y","z"] as const).forEach(axis => {
       const map = new Map<string, string[]>();
-      if (activeF1) { const k = key01((F1 as any)[axis]); map.set(k, [...(map.get(k)||[]), 'F1']); }
-      if (activeF2) { const k = key01((F2 as any)[axis]); map.set(k, [...(map.get(k)||[]), 'F2']); }
+      if (axis !== 'z') {
+        if (activeF1) { const k = key01((F1 as any)[axis]); map.set(k, [...(map.get(k)||[]), 'F1']); }
+        if (activeF2) { const k = key01((F2 as any)[axis]); map.set(k, [...(map.get(k)||[]), 'F2']); }
+      }
       pts.forEach((p,i)=>{ const k=key01((p as any)[axis]); map.set(k, [...(map.get(k)||[]), `P${i+1}`]); });
       for (const [k, names] of map) if (names.length>1) out.push(`${axis.toUpperCase()} repetida (= ${k}) entre ${names.join(', ')}`);
     });
